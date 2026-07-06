@@ -1,0 +1,16 @@
+{
+  "name": "SDE公众号长文写作台",
+  "short_name": "公众号写作台",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f2ec",
+  "theme_color": "#315f4d",
+  "description": "面向手机和电脑的公众号长文写作工具。",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
