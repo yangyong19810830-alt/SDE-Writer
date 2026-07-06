@@ -1,11 +1,8 @@
-FROM node:24-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
-COPY package.json ./
-COPY server.js ./
-COPY prompts ./prompts
-COPY public ./public
+COPY . .
 
 ENV PORT=5173
 EXPOSE 5173

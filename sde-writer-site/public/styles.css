@@ -240,7 +240,8 @@ button.wide {
   color: var(--ink);
 }
 
-.history-box {
+.history-box,
+.admin-box {
   margin-top: 22px;
   border-top: 1px solid var(--line);
   padding-top: 18px;
@@ -312,6 +313,38 @@ button.wide {
   border-color: var(--accent);
   background: #f7f2e9;
   color: var(--ink);
+}
+
+.invite-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.invite-result {
+  margin: 12px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.invite-result strong,
+.invite-result span {
+  display: block;
+}
+
+.invite-result strong {
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.invite-code-row {
+  width: 100%;
 }
 
 @media (max-width: 900px) {
@@ -469,7 +502,15 @@ button.wide {
     margin-top: 20px;
   }
 
+  .admin-box {
+    margin-top: 20px;
+  }
+
   .history-item {
+    grid-template-columns: 1fr;
+  }
+
+  .invite-actions {
     grid-template-columns: 1fr;
   }
 

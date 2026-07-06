@@ -22,7 +22,7 @@ START_WEBSITE.bat
 http://localhost:5173
 ```
 
-DeepSeek API Key 在网页里填写，不需要在黑色窗口里输入。
+DeepSeek API Key 不会出现在网页里。请在启动网站前通过环境变量设置。
 
 最简单的方式：右键或在 PowerShell 中运行：
 
@@ -30,7 +30,7 @@ DeepSeek API Key 在网页里填写，不需要在黑色窗口里输入。
 .\start.ps1
 ```
 
-脚本会提示你输入 DeepSeek API Key，不会把 Key 写进文件。
+脚本会提示你输入 DeepSeek API Key，不会把 Key 写进网页或代码文件。
 
 也可以手动设置 DeepSeek API Key：
 

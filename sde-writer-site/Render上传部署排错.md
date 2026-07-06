@@ -34,6 +34,20 @@ sde-writer-site/server.js
 
 上传时进入 `sde-writer-site` 文件夹，把里面的文件全部上传，而不是上传外层文件夹本身。
 
+现在代码也兼容另一种结构：如果你已经把 `public` 和 `prompts` 里的文件直接放在根目录，只要根目录里有这些文件，也能运行：
+
+```text
+package.json
+server.js
+Dockerfile
+index.html
+app.js
+styles.css
+sde-system-prompt.md
+```
+
+也就是说，新版已经不强制要求必须保留 `public` 和 `prompts` 文件夹。
+
 ## 最常见原因 2：Node 版本太新
 
 已经改成更稳的：
@@ -50,7 +64,7 @@ Render 后台要填：
 
 ```text
 DEEPSEEK_API_KEY=你的 DeepSeek API Key
-INVITE_CODE=你的邀请码
+ADMIN_PASSWORD=你的管理员密码
 ```
 
 不过环境变量没填通常不会导致“构建失败”，只会导致网站打开后不能生成。

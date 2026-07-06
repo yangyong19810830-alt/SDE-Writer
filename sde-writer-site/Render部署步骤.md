@@ -13,12 +13,12 @@
 
 ```text
 DEEPSEEK_API_KEY=你的 DeepSeek API Key
-INVITE_CODE=你想设置的邀请码
+ADMIN_PASSWORD=你的管理员密码
 ```
 
 7. 部署完成后，Render 会给你一个 `onrender.com` 网址。
 
-用户打开网址后，只需要输入邀请码，就能使用；你的 DeepSeek Key 不会显示在网页里。
+你打开网址后，在管理员区域输入管理员密码，就可以生成 3 天、1 个月、3 个月三种邀请码。用户打开网址后，只需要输入有效邀请码，就能使用；你的 DeepSeek Key 不会显示在网页里。
 
 ## 方式二：手动建 Web Service
 
@@ -38,7 +38,7 @@ Start Command: npm start
 
 ```text
 DEEPSEEK_API_KEY=你的 DeepSeek API Key
-INVITE_CODE=你想设置的邀请码
+ADMIN_PASSWORD=你的管理员密码
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 ```
 
@@ -48,4 +48,5 @@ DEEPSEEK_BASE_URL=https://api.deepseek.com
 
 - Render 免费服务可能会休眠，第一次打开可能慢一点。
 - 别把 DeepSeek API Key 写进代码或发给别人，只放在 Render 的 Environment Variables 里。
-- 邀请码可以定期更换，防止外传。
+- 管理员密码也只放在 Render 的 Environment Variables 里，不要发给普通用户。
+- 邀请码会自动过期，可以按 3 天、1 个月、3 个月发给不同用户。
