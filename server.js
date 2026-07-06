@@ -6,8 +6,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const publicDir = path.join(__dirname, "public");
-const promptPath = path.join(__dirname, "prompts", "sde-system-prompt.md");
+const publicDir = existsSync(path.join(__dirname, "public"))
+  ? path.join(__dirname, "public")
+  : __dirname;
+const promptPath = existsSync(path.join(__dirname, "prompts", "sde-system-prompt.md"))
+  ? path.join(__dirname, "prompts", "sde-system-prompt.md")
+  : path.join(__dirname, "sde-system-prompt.md");
 
 const port = Number(process.env.PORT || 5173);
 const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
