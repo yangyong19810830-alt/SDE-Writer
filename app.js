@@ -1,6 +1,5 @@
 const fields = {
   topic: document.querySelector("#topic"),
-  apiKey: document.querySelector("#apiKey"),
   inviteCode: document.querySelector("#inviteCode"),
   audience: document.querySelector("#audience"),
   style: document.querySelector("#style"),
@@ -26,22 +25,26 @@ const resultTitle = document.querySelector("#resultTitle");
 const historyList = document.querySelector("#historyList");
 const clearDraftButton = document.querySelector("#clearDraft");
 const mobileNavButtons = document.querySelectorAll("[data-scroll-target]");
-const apiKeyLabel = document.querySelector("#apiKeyLabel");
 const inviteCodeLabel = document.querySelector("#inviteCodeLabel");
+const adminInviteBox = document.querySelector("#adminInviteBox");
+const adminPassword = document.querySelector("#adminPassword");
+const inviteButtons = document.querySelectorAll("[data-invite-duration]");
+const inviteResult = document.querySelector("#inviteResult");
+const inviteList = document.querySelector("#inviteList");
+const refreshInvitesButton = document.querySelector("#refreshInvites");
 
 let controller = null;
 let currentMode = "article";
 let saveTimer = null;
-let serverHasApiKey = false;
 let serverRequiresInvite = false;
 
 const draftKey = "sdeWriter.currentDraft.v1";
 const historyKey = "sdeWriter.articleHistory.v1";
+const adminPasswordKey = "sdeWriter.adminPassword.v1";
 
 function getPayload() {
   return {
     topic: fields.topic.value.trim(),
-    apiKey: fields.apiKey.value.trim(),
     inviteCode: fields.inviteCode.value.trim(),
     audience: fields.audience.value.trim(),
     style: fields.style.value.trim(),
@@ -83,6 +86,9 @@ function saveCurrentDraft() {
     savedAt: new Date().toISOString()
   };
   localStorage.setItem(draftKey, JSON.stringify(data));
+  if (adminPassword) {
+    sessionStorage.setItem(adminPasswordKey, adminPassword.value);
+  }
 }
 
 function loadCurrentDraft() {
@@ -220,21 +226,108 @@ async function checkHealth() {
   try {
     const response = await fetch("/api/health");
     const data = await response.json();
-    statusEl.textContent = data.hasApiKey ? "API 已就绪" : "页面填写 Key";
-    serverHasApiKey = Boolean(data.hasApiKey);
+    statusEl.textContent = data.hasApiKey ? "API 已就绪" : "未配置 Key";
     serverRequiresInvite = Boolean(data.requiresInvite);
-    if (serverHasApiKey && apiKeyLabel) {
-      apiKeyLabel.hidden = true;
-      fields.apiKey.value = "";
-    }
     if (inviteCodeLabel) {
       inviteCodeLabel.hidden = !serverRequiresInvite;
     }
     if (serverRequiresInvite) {
       statusEl.textContent = "需要邀请码";
     }
+    if (adminInviteBox) {
+      adminInviteBox.hidden = !Boolean(data.hasAdmin);
+    }
   } catch {
     statusEl.textContent = "未连接";
+  }
+}
+
+function formatDateTime(isoString) {
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+async function generateInvite(duration) {
+  const password = adminPassword.value.trim();
+  if (!password) {
+    inviteResult.textContent = "请先输入管理员密码。";
+    return;
+  }
+
+  inviteResult.textContent = "正在生成邀请码...";
+
+  try {
+    const response = await fetch("/api/invites/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ adminPassword: password, duration })
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      inviteResult.textContent = data.error || "生成失败。";
+      return;
+    }
+
+    inviteResult.innerHTML = [
+      `<strong>${escapeHtml(data.invite.code)}</strong>`,
+      `<span>${escapeHtml(data.invite.label)}有效，到期：${escapeHtml(formatDateTime(data.invite.expiresAt))}</span>`
+    ].join("");
+    await navigator.clipboard.writeText(data.invite.code).catch(() => {});
+    await loadInvites();
+  } catch (error) {
+    inviteResult.textContent = `生成失败：${error.message || error}`;
+  }
+}
+
+async function loadInvites() {
+  const password = adminPassword.value.trim();
+  if (!password) return;
+
+  try {
+    const response = await fetch("/api/invites/list", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ adminPassword: password })
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      inviteList.textContent = data.error || "读取失败。";
+      return;
+    }
+
+    renderInvites(data.invites || []);
+  } catch (error) {
+    inviteList.textContent = `读取失败：${error.message || error}`;
+  }
+}
+
+function renderInvites(invites) {
+  inviteList.innerHTML = "";
+
+  if (!invites.length) {
+    inviteList.textContent = "暂无有效邀请码。";
+    return;
+  }
+
+  for (const invite of invites) {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "history-open invite-code-row";
+    row.innerHTML = `<strong>${escapeHtml(invite.code)}</strong><span>${escapeHtml(invite.label)} · 到期 ${escapeHtml(formatDateTime(invite.expiresAt))}</span>`;
+    row.addEventListener("click", async () => {
+      await navigator.clipboard.writeText(invite.code).catch(() => {});
+      inviteResult.textContent = `已复制邀请码：${invite.code}`;
+    });
+    inviteList.appendChild(row);
   }
 }
 
@@ -478,6 +571,21 @@ for (const button of mobileNavButtons) {
     const target = document.querySelector(`#${button.dataset.scrollTarget}`);
     if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
   });
+}
+
+if (adminPassword) {
+  adminPassword.value = sessionStorage.getItem(adminPasswordKey) || "";
+  adminPassword.addEventListener("input", () => {
+    sessionStorage.setItem(adminPasswordKey, adminPassword.value);
+  });
+}
+
+for (const button of inviteButtons) {
+  button.addEventListener("click", () => generateInvite(button.dataset.inviteDuration));
+}
+
+if (refreshInvitesButton) {
+  refreshInvitesButton.addEventListener("click", loadInvites);
 }
 
 loadCurrentDraft();

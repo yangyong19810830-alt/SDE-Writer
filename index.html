@@ -27,11 +27,6 @@
           <div id="status" class="status">检查中</div>
         </div>
 
-        <label id="apiKeyLabel">
-          DeepSeek API Key
-          <input id="apiKey" type="password" placeholder="在这里粘贴 sk- 开头的 API Key" autocomplete="off" />
-        </label>
-
         <label id="inviteCodeLabel" hidden>
           邀请码
           <input id="inviteCode" type="password" placeholder="请输入邀请码" autocomplete="off" />
@@ -116,6 +111,30 @@
             <button id="clearDraft" class="secondary small">清空当前草稿</button>
           </div>
           <div id="historyList" class="history-list">暂无保存记录。</div>
+        </section>
+
+        <section id="adminInviteBox" class="admin-box" hidden>
+          <div class="history-head">
+            <div>
+              <p class="eyebrow">管理员</p>
+              <h2>生成邀请码</h2>
+            </div>
+            <button id="refreshInvites" class="secondary small" type="button">刷新</button>
+          </div>
+
+          <label>
+            管理员密码
+            <input id="adminPassword" type="password" placeholder="输入 ADMIN_PASSWORD" autocomplete="off" />
+          </label>
+
+          <div class="invite-actions">
+            <button class="secondary" type="button" data-invite-duration="3d">生成3天码</button>
+            <button class="secondary" type="button" data-invite-duration="1m">生成1个月码</button>
+            <button class="secondary" type="button" data-invite-duration="3m">生成3个月码</button>
+          </div>
+
+          <div id="inviteResult" class="invite-result">输入管理员密码后，可以自动生成三种时长的邀请码。</div>
+          <div id="inviteList" class="history-list"></div>
         </section>
       </section>
 
