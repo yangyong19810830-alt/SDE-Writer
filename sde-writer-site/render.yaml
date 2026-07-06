@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: sde-wechat-writer
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 20.19.0
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: INVITE_CODE
+        sync: false
+      - key: DEEPSEEK_BASE_URL
+        value: https://api.deepseek.com

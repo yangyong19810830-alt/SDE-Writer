@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#315f4d" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="公众号写作台" />
+    <title>SDE公众号长文写作台</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <nav class="mobile-nav" aria-label="手机快捷导航">
+        <button type="button" data-scroll-target="editorPanel">写作</button>
+        <button type="button" data-scroll-target="resultPanel">结果</button>
+        <button type="button" data-scroll-target="historyBox">历史</button>
+      </nav>
+
+      <section id="editorPanel" class="panel editor">
+        <div class="brand">
+          <div>
+            <p class="eyebrow">公众号长文写作台</p>
+            <h1>把一个选题写成有发生感的深度文章</h1>
+          </div>
+          <div id="status" class="status">检查中</div>
+        </div>
+
+        <label id="apiKeyLabel">
+          DeepSeek API Key
+          <input id="apiKey" type="password" placeholder="在这里粘贴 sk- 开头的 API Key" autocomplete="off" />
+        </label>
+
+        <label id="inviteCodeLabel" hidden>
+          邀请码
+          <input id="inviteCode" type="password" placeholder="请输入邀请码" autocomplete="off" />
+        </label>
+
+        <label>
+          文章主题
+          <textarea id="topic" rows="3" placeholder="例如：为什么孩子会背公式却不会做题"></textarea>
+        </label>
+
+        <button id="generateTitles" class="wide secondary">先生成5个十万加标题</button>
+
+        <div class="grid">
+          <label>
+            目标读者
+            <input id="audience" value="小学数学老师、家长、教培从业者" />
+          </label>
+          <label>
+            文章风格
+            <input id="style" value="通俗但有深度，温和但有穿透力" />
+          </label>
+        </div>
+
+        <label>
+          文章目的
+          <input id="goal" value="让读者重新理解问题发生的过程，并获得可实践的破局方式" />
+        </label>
+
+        <div class="grid">
+          <label>
+            生成模式
+            <select id="mode">
+              <option value="outline">先写构思和大纲</option>
+              <option value="draft">直接写完整长文</option>
+              <option value="polish">修订已有草稿</option>
+            </select>
+          </label>
+          <label>
+            DeepSeek 模型
+            <select id="model">
+              <option value="deepseek-v4-pro">deepseek-v4-pro</option>
+              <option value="deepseek-v4-flash">deepseek-v4-flash</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="grid">
+          <label>
+            目标长度
+            <input id="length" value="8000 到 12000 字" />
+          </label>
+          <label>
+            温度
+            <input id="temperature" type="number" min="0" max="1.5" step="0.1" value="0.7" />
+          </label>
+        </div>
+
+        <label class="checkbox">
+          <input id="thinking" type="checkbox" />
+          开启深度思考参数
+        </label>
+
+        <label>
+          补充要求或草稿
+          <textarea id="extra" rows="5" placeholder="例如：不要写得太鸡汤；多举小学数学例子；或者粘贴需要修订的草稿。"></textarea>
+        </label>
+
+        <div class="actions">
+          <button id="generate">开始生成</button>
+          <button id="stop" class="secondary" disabled>停止</button>
+          <button id="save" class="secondary">保存当前文章</button>
+          <button id="copy" class="secondary">复制结果</button>
+          <button id="download" class="secondary">下载 Markdown</button>
+        </div>
+
+        <section id="historyBox" class="history-box">
+          <div class="history-head">
+            <div>
+              <p class="eyebrow">本地历史</p>
+              <h2>自动保存与文章记录</h2>
+            </div>
+            <button id="clearDraft" class="secondary small">清空当前草稿</button>
+          </div>
+          <div id="historyList" class="history-list">暂无保存记录。</div>
+        </section>
+      </section>
+
+      <section id="resultPanel" class="panel result">
+        <div class="result-head">
+          <div>
+            <p class="eyebrow">生成结果</p>
+            <h2 id="resultTitle">等待选题</h2>
+          </div>
+          <span id="count">0 字</span>
+        </div>
+        <article id="output" class="output">在左侧填写主题，然后点击“开始生成”。</article>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
