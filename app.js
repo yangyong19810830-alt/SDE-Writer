@@ -69,6 +69,60 @@ function updateCount() {
   countEl.textContent = `${text.replace(/\s/g, "").length} 字`;
 }
 
+function appendOutputText(text) {
+  output.textContent += text;
+  output.scrollTop = output.scrollHeight;
+  updateCount();
+  scheduleAutosave();
+}
+
+async function readGeneratedStream(response, onText) {
+  const contentType = response.headers.get("content-type") || "";
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  if (!contentType.includes("text/event-stream")) {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      onText(decoder.decode(value, { stream: true }));
+    }
+    return;
+  }
+
+  function handleEvent(block) {
+    const lines = block.split("\n").map((line) => line.trimEnd());
+    const eventLine = lines.find((line) => line.startsWith("event:"));
+    const dataLines = lines.filter((line) => line.startsWith("data:"));
+    const eventName = eventLine ? eventLine.slice(6).trim() : "message";
+    const dataText = dataLines.map((line) => line.slice(5).trim()).join("\n");
+
+    if (!dataText || eventName === "done") return;
+
+    try {
+      const data = JSON.parse(dataText);
+      if (data.text) onText(data.text);
+    } catch {
+      onText(dataText);
+    }
+  }
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const parts = buffer.split("\n\n");
+    buffer = parts.pop() || "";
+
+    for (const part of parts) {
+      if (part.trim() && !part.startsWith(":")) handleEvent(part);
+    }
+  }
+
+  if (buffer.trim() && !buffer.startsWith(":")) handleEvent(buffer);
+}
+
 function getOutputText() {
   return output.textContent || "";
 }
@@ -343,7 +397,7 @@ async function generate() {
   currentMode = "article";
   controller = new AbortController();
   setBusy(true);
-  output.textContent = "";
+  output.textContent = "正在连接写作引擎...\n\n";
   resultTitle.textContent = payload.mode === "outline" ? "构思和大纲" : "公众号文章";
   updateCount();
   scheduleAutosave();
@@ -369,17 +423,8 @@ async function generate() {
       return;
     }
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      output.textContent += decoder.decode(value, { stream: true });
-      output.scrollTop = output.scrollHeight;
-      updateCount();
-      scheduleAutosave();
-    }
+    output.textContent = "";
+    await readGeneratedStream(response, appendOutputText);
   } catch (error) {
     if (error.name !== "AbortError") {
       output.textContent += `\n\n生成中断：${error.message || error}`;
@@ -406,7 +451,7 @@ async function generateTitles() {
   controller = new AbortController();
   setBusy(true);
   output.classList.remove("title-cards");
-  output.textContent = "";
+  output.textContent = "正在生成标题...\n\n";
   resultTitle.textContent = "5个十万加标题";
   updateCount();
   scheduleAutosave();
@@ -437,17 +482,8 @@ async function generateTitles() {
       return;
     }
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      output.textContent += decoder.decode(value, { stream: true });
-      output.scrollTop = output.scrollHeight;
-      updateCount();
-      scheduleAutosave();
-    }
+    output.textContent = "";
+    await readGeneratedStream(response, appendOutputText);
 
     renderTitleChoices(output.textContent);
     scheduleAutosave();

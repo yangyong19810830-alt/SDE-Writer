@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { randomBytes } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,6 +18,9 @@ const port = Number(process.env.PORT || 5173);
 const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
 const deepseekBaseUrl = process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com";
 const inviteCode = process.env.INVITE_CODE || "";
+const adminPassword = process.env.ADMIN_PASSWORD || "";
+const dataDir = path.join(__dirname, "data");
+const inviteStorePath = path.join(dataDir, "invite-codes.json");
 
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
@@ -31,11 +35,108 @@ function sendJson(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
+function sendStreamEvent(res, eventName, data) {
+  if (eventName) res.write(`event: ${eventName}\n`);
+  res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
 async function readRequestJson(req) {
   const chunks = [];
   for await (const chunk of req) chunks.push(chunk);
   const raw = Buffer.concat(chunks).toString("utf8");
   return raw ? JSON.parse(raw) : {};
+}
+
+async function readInviteStore() {
+  try {
+    const raw = await readFile(inviteStorePath, "utf8");
+    const data = JSON.parse(raw);
+    return Array.isArray(data.codes) ? data : { codes: [] };
+  } catch {
+    return { codes: [] };
+  }
+}
+
+async function writeInviteStore(store) {
+  await mkdir(dataDir, { recursive: true });
+  await writeFile(inviteStorePath, JSON.stringify(store, null, 2), "utf8");
+}
+
+async function getActiveInviteCodes() {
+  const store = await readInviteStore();
+  const now = Date.now();
+  const activeCodes = store.codes.filter((item) => new Date(item.expiresAt).getTime() > now);
+
+  if (activeCodes.length !== store.codes.length) {
+    await writeInviteStore({ codes: activeCodes });
+  }
+
+  return activeCodes;
+}
+
+async function isValidInviteCode(code) {
+  if (inviteCode && code === inviteCode) return true;
+
+  const normalizedCode = String(code || "").trim();
+  if (!normalizedCode) return false;
+
+  const activeCodes = await getActiveInviteCodes();
+  return activeCodes.some((item) => item.code === normalizedCode);
+}
+
+function generateInviteCode() {
+  return `SDE-${randomBytes(4).toString("hex").toUpperCase()}`;
+}
+
+function getInviteDuration(kind) {
+  const durations = {
+    "3d": { label: "3天", days: 3 },
+    "1m": { label: "1个月", days: 30 },
+    "3m": { label: "3个月", days: 90 }
+  };
+  return durations[kind] || durations["3d"];
+}
+
+async function generateInvite(input, res) {
+  if (!adminPassword) {
+    sendJson(res, 500, { error: "还没有设置 ADMIN_PASSWORD，不能生成邀请码。" });
+    return;
+  }
+
+  if (input.adminPassword !== adminPassword) {
+    sendJson(res, 403, { error: "管理员密码不正确。" });
+    return;
+  }
+
+  const duration = getInviteDuration(input.duration);
+  const now = Date.now();
+  const expiresAt = new Date(now + duration.days * 24 * 60 * 60 * 1000).toISOString();
+  const code = generateInviteCode();
+  const store = await readInviteStore();
+  const item = {
+    code,
+    duration: input.duration || "3d",
+    label: duration.label,
+    createdAt: new Date(now).toISOString(),
+    expiresAt
+  };
+
+  await writeInviteStore({ codes: [item, ...store.codes].slice(0, 200) });
+  sendJson(res, 200, { ok: true, invite: item });
+}
+
+async function listInvites(input, res) {
+  if (!adminPassword) {
+    sendJson(res, 500, { error: "还没有设置 ADMIN_PASSWORD，不能查看邀请码。" });
+    return;
+  }
+
+  if (input.adminPassword !== adminPassword) {
+    sendJson(res, 403, { error: "管理员密码不正确。" });
+    return;
+  }
+
+  sendJson(res, 200, { ok: true, invites: await getActiveInviteCodes() });
 }
 
 function buildUserPrompt(input) {
@@ -76,18 +177,16 @@ function buildUserPrompt(input) {
 }
 
 async function callDeepSeekStream(input, res) {
-  if (inviteCode && input.inviteCode !== inviteCode) {
+  if ((inviteCode || adminPassword) && !(await isValidInviteCode(input.inviteCode))) {
     sendJson(res, 403, {
-      error: "邀请码不正确，不能生成内容。"
+      error: "邀请码不正确或已过期，不能生成内容。"
     });
     return;
   }
 
-  const apiKey = input.apiKey || deepseekApiKey;
-
-  if (!apiKey) {
+  if (!deepseekApiKey) {
     sendJson(res, 500, {
-      error: "请先在页面里填写 DeepSeek API Key。"
+      error: "后台还没有配置 DeepSeek API Key，请管理员在部署平台环境变量里设置 DEEPSEEK_API_KEY。"
     });
     return;
   }
@@ -97,7 +196,7 @@ async function callDeepSeekStream(input, res) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`
+      Authorization: `Bearer ${deepseekApiKey}`
     },
     body: JSON.stringify({
       model: input.model || "deepseek-v4-pro",
@@ -124,10 +223,14 @@ async function callDeepSeekStream(input, res) {
   }
 
   res.writeHead(200, {
-    "Content-Type": "text/plain; charset=utf-8",
+    "Content-Type": "text/event-stream; charset=utf-8",
     "Cache-Control": "no-cache",
-    "X-Accel-Buffering": "no"
+    "Connection": "keep-alive",
+    "X-Accel-Buffering": "no",
+    "X-Content-Type-Options": "nosniff"
   });
+  if (typeof res.flushHeaders === "function") res.flushHeaders();
+  res.write(": connected\n\n");
 
   const decoder = new TextDecoder();
   let buffer = "";
@@ -147,13 +250,14 @@ async function callDeepSeekStream(input, res) {
         const json = JSON.parse(data);
         const delta = json.choices?.[0]?.delta;
         const text = delta?.content || "";
-        if (text) res.write(text);
+        if (text) sendStreamEvent(res, "token", { text });
       } catch {
         continue;
       }
     }
   }
 
+  sendStreamEvent(res, "done", { ok: true });
   res.end();
 }
 
@@ -180,9 +284,22 @@ const server = createServer(async (req, res) => {
       sendJson(res, 200, {
         ok: true,
         hasApiKey: Boolean(deepseekApiKey),
-        requiresInvite: Boolean(inviteCode),
+        requiresInvite: Boolean(inviteCode || adminPassword),
+        hasAdmin: Boolean(adminPassword),
         baseUrl: deepseekBaseUrl
       });
+      return;
+    }
+
+    if (req.method === "POST" && req.url === "/api/invites/generate") {
+      const input = await readRequestJson(req);
+      await generateInvite(input, res);
+      return;
+    }
+
+    if (req.method === "POST" && req.url === "/api/invites/list") {
+      const input = await readRequestJson(req);
+      await listInvites(input, res);
       return;
     }
 
