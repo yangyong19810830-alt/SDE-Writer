@@ -37,6 +37,7 @@ let controller = null;
 let currentMode = "article";
 let saveTimer = null;
 let serverRequiresInvite = false;
+let articleRawText = "";
 
 const draftKey = "sdeWriter.currentDraft.v1";
 const historyKey = "sdeWriter.articleHistory.v1";
@@ -65,13 +66,73 @@ function setBusy(isBusy) {
 }
 
 function updateCount() {
-  const text = output.textContent || "";
+  const text = getOutputText();
   countEl.textContent = `${text.replace(/\s/g, "").length} 字`;
 }
 
-function appendOutputText(text) {
-  output.textContent += text;
+function stripMarkdown(text) {
+  return String(text || "")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/__(.*?)__/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .trim();
+}
+
+function documentHtml(text) {
+  const lines = String(text || "").replace(/\r/g, "").split("\n");
+  const blocks = [];
+  let paragraph = [];
+  const flushParagraph = () => {
+    const content = stripMarkdown(paragraph.join(" "));
+    if (content) blocks.push(`<p>${escapeHtml(content)}</p>`);
+    paragraph = [];
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) {
+      flushParagraph();
+      continue;
+    }
+    if (/^[-*_]{3,}$/.test(line)) {
+      flushParagraph();
+      continue;
+    }
+    const markdownHeading = line.match(/^#{1,6}\s+(.+)$/);
+    const boldHeading = line.match(/^\*\*(.+?)\*\*[:：]?$/);
+    const heading = markdownHeading?.[1] || boldHeading?.[1];
+    if (heading) {
+      flushParagraph();
+      blocks.push(`<h3>${escapeHtml(stripMarkdown(heading))}</h3>`);
+      continue;
+    }
+    if (/^[-*•]\s+/.test(line)) {
+      flushParagraph();
+      blocks.push(`<p class="doc-list">${escapeHtml(stripMarkdown(line.replace(/^[-*•]\s+/, "")))}</p>`);
+      continue;
+    }
+    paragraph.push(line);
+  }
+  flushParagraph();
+  return blocks.join("");
+}
+
+function renderDocument() {
+  output.classList.remove("title-cards");
+  output.classList.add("word-document");
+  output.innerHTML = documentHtml(articleRawText);
   output.scrollTop = output.scrollHeight;
+}
+
+function setOutputText(text) {
+  articleRawText = String(text || "");
+  renderDocument();
+  updateCount();
+}
+
+function appendOutputText(text) {
+  articleRawText += text;
+  renderDocument();
   updateCount();
   scheduleAutosave();
 }
@@ -124,7 +185,7 @@ async function readGeneratedStream(response, onText) {
 }
 
 function getOutputText() {
-  return output.textContent || "";
+  return articleRawText || output.textContent || "";
 }
 
 function scheduleAutosave() {
@@ -160,8 +221,7 @@ function loadCurrentDraft() {
       }
     }
     resultTitle.textContent = data.resultTitle || "已恢复草稿";
-    output.textContent = data.output || "已恢复上次输入。";
-    updateCount();
+    setOutputText(data.output || "已恢复上次输入。");
   } catch {
     localStorage.removeItem(draftKey);
   }
@@ -183,8 +243,7 @@ function writeHistory(items) {
 function saveArticleToHistory() {
   const text = getOutputText().trim();
   if (!text) {
-    output.textContent = "当前没有可保存的文章或结果。";
-    updateCount();
+    setOutputText("当前没有可保存的文章或结果。");
     scheduleAutosave();
     return;
   }
@@ -249,8 +308,7 @@ function renderHistory() {
       fields.mode.value = item.mode || fields.mode.value;
       resultTitle.textContent = item.resultTitle || "历史文章";
       output.classList.remove("title-cards");
-      output.textContent = item.output || "";
-      updateCount();
+      setOutputText(item.output || "");
       scheduleAutosave();
     });
 
@@ -388,8 +446,7 @@ function renderInvites(invites) {
 async function generate() {
   const payload = getPayload();
   if (!payload.topic && payload.mode !== "polish") {
-      output.textContent = "请先填写文章主题。";
-      updateCount();
+      setOutputText("请先填写文章主题。");
       scheduleAutosave();
       return;
   }
@@ -397,7 +454,7 @@ async function generate() {
   currentMode = "article";
   controller = new AbortController();
   setBusy(true);
-  output.textContent = "正在连接写作引擎...\n\n";
+  setOutputText("正在连接写作引擎...");
   resultTitle.textContent = payload.mode === "outline" ? "构思和大纲" : "公众号文章";
   updateCount();
   scheduleAutosave();
@@ -414,22 +471,20 @@ async function generate() {
       const text = await response.text();
       try {
         const data = JSON.parse(text);
-        output.textContent = data.detail ? `${data.error}\n\n${data.detail}` : data.error;
+        setOutputText(data.detail ? `${data.error}\n\n${data.detail}` : data.error);
       } catch {
-        output.textContent = text || "生成失败。";
+        setOutputText(text || "生成失败。");
       }
       updateCount();
       scheduleAutosave();
       return;
     }
 
-    output.textContent = "";
+    setOutputText("");
     await readGeneratedStream(response, appendOutputText);
   } catch (error) {
     if (error.name !== "AbortError") {
-      output.textContent += `\n\n生成中断：${error.message || error}`;
-      updateCount();
-      scheduleAutosave();
+      appendOutputText(`\n\n生成中断：${error.message || error}`);
     }
   } finally {
     setBusy(false);
@@ -441,8 +496,7 @@ async function generate() {
 async function generateTitles() {
   const payload = getPayload();
   if (!payload.topic) {
-    output.textContent = "请先在“文章主题”里写一个标题方向，比如：秒懂小学奥数的整除特征。";
-    updateCount();
+    setOutputText("请先在“文章主题”里写一个标题方向，比如：秒懂小学奥数的整除特征。");
     scheduleAutosave();
     return;
   }
@@ -451,7 +505,7 @@ async function generateTitles() {
   controller = new AbortController();
   setBusy(true);
   output.classList.remove("title-cards");
-  output.textContent = "正在生成标题...\n\n";
+  setOutputText("正在生成标题...");
   resultTitle.textContent = "5个十万加标题";
   updateCount();
   scheduleAutosave();
@@ -473,25 +527,23 @@ async function generateTitles() {
       const text = await response.text();
       try {
         const data = JSON.parse(text);
-        output.textContent = data.detail ? `${data.error}\n\n${data.detail}` : data.error;
+        setOutputText(data.detail ? `${data.error}\n\n${data.detail}` : data.error);
       } catch {
-        output.textContent = text || "生成失败。";
+        setOutputText(text || "生成失败。");
       }
       updateCount();
       scheduleAutosave();
       return;
     }
 
-    output.textContent = "";
+    setOutputText("");
     await readGeneratedStream(response, appendOutputText);
 
-    renderTitleChoices(output.textContent);
+    renderTitleChoices(articleRawText);
     scheduleAutosave();
   } catch (error) {
     if (error.name !== "AbortError") {
-      output.textContent += `\n\n生成中断：${error.message || error}`;
-      updateCount();
-      scheduleAutosave();
+      appendOutputText(`\n\n生成中断：${error.message || error}`);
     }
   } finally {
     setBusy(false);
@@ -526,6 +578,7 @@ function renderTitleChoices(rawText) {
   if (!choices.length) return;
 
   output.classList.add("title-cards");
+  output.classList.remove("word-document");
   output.innerHTML = "";
 
   const intro = document.createElement("p");
@@ -542,8 +595,7 @@ function renderTitleChoices(rawText) {
       fields.topic.value = choice.title;
       resultTitle.textContent = "已选标题";
       output.classList.remove("title-cards");
-      output.textContent = `已选择标题：\n\n${choice.title}\n\n现在可以把“生成模式”改为“直接写完整长文”，再点击“开始生成”。`;
-      updateCount();
+      setOutputText(`已选择标题：\n\n${choice.title}\n\n现在可以把“生成模式”改为“直接写完整长文”，再点击“开始生成”。`);
       scheduleAutosave();
     });
     output.appendChild(button);
@@ -557,7 +609,16 @@ function stop() {
 }
 
 async function copyResult() {
-  await navigator.clipboard.writeText(output.textContent || "");
+  const plainText = getOutputText();
+  const richText = `<html><body><h1>${escapeHtml(resultTitle.textContent || "公众号文章")}</h1>${documentHtml(plainText)}</body></html>`;
+  if (window.ClipboardItem && navigator.clipboard?.write) {
+    await navigator.clipboard.write([new ClipboardItem({
+      "text/plain": new Blob([plainText], { type: "text/plain;charset=utf-8" }),
+      "text/html": new Blob([richText], { type: "text/html;charset=utf-8" })
+    })]);
+  } else {
+    await navigator.clipboard.writeText(plainText);
+  }
   copyButton.textContent = "已复制";
   setTimeout(() => {
     copyButton.textContent = "复制结果";
@@ -570,17 +631,17 @@ function clearCurrentDraft() {
   fields.extra.value = "";
   resultTitle.textContent = "等待选题";
   output.classList.remove("title-cards");
-  output.textContent = "当前草稿已清空。历史记录不会被删除。";
-  updateCount();
+  setOutputText("当前草稿已清空。历史记录不会被删除。");
 }
 
-function downloadMarkdown() {
+function downloadWord() {
   const title = (fields.topic.value.trim() || "公众号文章").replace(/[\\/:*?"<>|]/g, "-");
-  const blob = new Blob([output.textContent || ""], { type: "text/markdown;charset=utf-8" });
+  const content = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>body{font-family:'Microsoft YaHei','PingFang SC',sans-serif;max-width:760px;margin:0 auto;font-size:12pt;line-height:1.9;color:#222}h1{font-size:22pt;line-height:1.35;margin:0 0 22pt}h3{font-size:15pt;margin:22pt 0 10pt}p{margin:0 0 12pt;text-indent:2em}.doc-list{text-indent:0;padding-left:1em}</style></head><body><h1>${escapeHtml(resultTitle.textContent || title)}</h1>${documentHtml(getOutputText())}</body></html>`;
+  const blob = new Blob([content], { type: "application/msword;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `${title}.md`;
+  link.download = `${title}.doc`;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -590,7 +651,7 @@ generateTitlesButton.addEventListener("click", generateTitles);
 stopButton.addEventListener("click", stop);
 saveButton.addEventListener("click", saveArticleToHistory);
 copyButton.addEventListener("click", copyResult);
-downloadButton.addEventListener("click", downloadMarkdown);
+downloadButton.addEventListener("click", downloadWord);
 clearDraftButton.addEventListener("click", clearCurrentDraft);
 output.addEventListener("input", () => {
   updateCount();

@@ -282,6 +282,29 @@ button.wide {
   white-space: normal;
 }
 
+.output.word-document {
+  white-space: normal;
+  font-family: "Microsoft YaHei", "PingFang SC", "Noto Serif SC", serif;
+  line-height: 2;
+}
+
+.word-document h3 {
+  margin: 28px 0 12px;
+  color: var(--ink);
+  font-size: 19px;
+  line-height: 1.5;
+}
+
+.word-document p {
+  margin: 0 0 16px;
+  text-indent: 2em;
+}
+
+.word-document .doc-list {
+  padding-left: 1em;
+  text-indent: 0;
+}
+
 .title-hint {
   margin: 0 0 12px;
   color: var(--muted);
