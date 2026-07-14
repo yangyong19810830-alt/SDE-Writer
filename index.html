@@ -15,7 +15,7 @@
       <nav class="mobile-nav" aria-label="手机快捷导航">
         <button type="button" data-scroll-target="editorPanel">写作</button>
         <button type="button" data-scroll-target="resultPanel">结果</button>
-        <button type="button" data-scroll-target="historyBox">历史</button>
+        <button type="button" data-scroll-target="historyPanel">历史</button>
       </nav>
 
       <section id="editorPanel" class="panel editor">
@@ -37,84 +37,95 @@
           <textarea id="topic" rows="3" placeholder="例如：为什么孩子会背公式却不会做题"></textarea>
         </label>
 
-        <button id="generateTitles" class="wide secondary">先生成5个十万加标题</button>
-
-        <div class="grid">
-          <label>
-            目标读者
-            <input id="audience" value="小学数学老师、家长、教培从业者" />
-          </label>
-          <label>
-            文章风格
-            <input id="style" value="通俗但有深度，温和但有穿透力" />
-          </label>
-        </div>
-
-        <label>
-          文章目的
-          <input id="goal" value="让读者重新理解问题发生的过程，并获得可实践的破局方式" />
-        </label>
-
-        <div class="grid">
-          <label>
-            生成模式
-            <select id="mode">
-              <option value="outline">先写构思和大纲</option>
-              <option value="draft">直接写完整长文</option>
-              <option value="polish">修订已有草稿</option>
-            </select>
-          </label>
-          <label>
-            DeepSeek 模型
-            <select id="model">
-              <option value="deepseek-v4-pro">deepseek-v4-pro</option>
-              <option value="deepseek-v4-flash">deepseek-v4-flash</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="grid">
-          <label>
-            目标长度
-            <input id="length" value="8000 到 12000 字" />
-          </label>
-          <label>
-            温度
-            <input id="temperature" type="number" min="0" max="1.5" step="0.1" value="0.7" />
-          </label>
-        </div>
-
-        <label class="checkbox">
-          <input id="thinking" type="checkbox" />
-          开启深度思考参数
-        </label>
-
-        <label>
-          补充要求或草稿
-          <textarea id="extra" rows="5" placeholder="例如：不要写得太鸡汤；多举小学数学例子；或者粘贴需要修订的草稿。"></textarea>
-        </label>
-
-        <div class="actions">
+        <div class="actions primary-actions">
           <button id="generate">开始生成</button>
-          <button id="stop" class="secondary" disabled>停止</button>
-          <button id="save" class="secondary">保存当前文章</button>
+          <button id="generateTitles" class="secondary">生成标题</button>
           <button id="copy" class="secondary">复制结果</button>
-          <button id="download" class="secondary">下载 Markdown</button>
+          <button id="stop" class="secondary" disabled>停止</button>
         </div>
 
-        <section id="historyBox" class="history-box">
-          <div class="history-head">
-            <div>
-              <p class="eyebrow">本地历史</p>
-              <h2>自动保存与文章记录</h2>
-            </div>
-            <button id="clearDraft" class="secondary small">清空当前草稿</button>
-          </div>
-          <div id="historyList" class="history-list">暂无保存记录。</div>
-        </section>
+        <details class="fold-panel">
+          <summary>写作设置</summary>
 
-        <section id="adminInviteBox" class="admin-box" hidden>
-          <div class="history-head">
+          <div class="grid">
+            <label>
+              目标读者
+              <input id="audience" value="小学数学老师、家长、教培从业者" />
+            </label>
+            <label>
+              文章风格
+              <input id="style" value="通俗但有深度，温和但有穿透力" />
+            </label>
+          </div>
+
+          <label>
+            文章目的
+            <input id="goal" value="让读者重新理解问题发生的过程，并获得可实践的破局方式" />
+          </label>
+
+          <div class="grid">
+            <label>
+              生成模式
+              <select id="mode">
+                <option value="outline">先写构思和大纲</option>
+                <option value="draft">直接写完整长文</option>
+                <option value="polish">修订已有草稿</option>
+              </select>
+            </label>
+            <label>
+              DeepSeek 模型
+              <select id="model">
+                <option value="deepseek-v4-pro">deepseek-v4-pro</option>
+                <option value="deepseek-v4-flash">deepseek-v4-flash</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="grid">
+            <label>
+              目标长度
+              <input id="length" value="8000 到 12000 字" />
+            </label>
+            <label>
+              温度
+              <input id="temperature" type="number" min="0" max="1.5" step="0.1" value="0.7" />
+            </label>
+          </div>
+
+          <label class="checkbox">
+            <input id="thinking" type="checkbox" />
+            开启深度思考参数
+          </label>
+
+          <label>
+            补充要求或草稿
+            <textarea id="extra" rows="5" placeholder="例如：不要写得太鸡汤；多举小学数学例子；或者粘贴需要修订的草稿。"></textarea>
+          </label>
+        </details>
+
+        <details id="historyPanel" class="fold-panel">
+          <summary>保存与历史</summary>
+          <div class="compact-actions">
+            <button id="save" class="secondary">保存当前文章</button>
+            <button id="download" class="secondary">下载 Markdown</button>
+            <button id="clearDraft" class="secondary">清空当前草稿</button>
+          </div>
+
+          <section id="historyBox" class="history-box">
+            <div class="history-head">
+              <div>
+                <p class="eyebrow">本地历史</p>
+                <h2>自动保存与文章记录</h2>
+              </div>
+            </div>
+            <div id="historyList" class="history-list">暂无保存记录。</div>
+          </section>
+        </details>
+
+        <details id="adminInviteBox" class="fold-panel admin-box" hidden>
+          <summary>管理员发码</summary>
+
+          <div class="history-head admin-head">
             <div>
               <p class="eyebrow">管理员</p>
               <h2>生成邀请码</h2>
@@ -135,7 +146,7 @@
 
           <div id="inviteResult" class="invite-result">输入管理员密码后，可以自动生成三种时长的邀请码。</div>
           <div id="inviteList" class="history-list"></div>
-        </section>
+        </details>
       </section>
 
       <section id="resultPanel" class="panel result">

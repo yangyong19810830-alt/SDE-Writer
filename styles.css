@@ -190,6 +190,71 @@ button.wide {
   margin-top: 10px;
 }
 
+.primary-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.primary-actions #generate {
+  grid-column: span 2;
+  min-height: 50px;
+}
+
+.compact-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.fold-panel {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffbf4;
+}
+
+.fold-panel > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 46px;
+  padding: 0 12px;
+  color: var(--ink);
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+.fold-panel > summary::-webkit-details-marker {
+  display: none;
+}
+
+.fold-panel > summary::after {
+  content: "+";
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.fold-panel[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.fold-panel[open] > summary::after {
+  content: "-";
+}
+
+.fold-panel > :not(summary) {
+  margin-left: 12px;
+  margin-right: 12px;
+}
+
+.fold-panel > :last-child {
+  margin-bottom: 12px;
+}
+
 .result {
   display: flex;
   flex-direction: column;
@@ -240,10 +305,14 @@ button.wide {
   color: var(--ink);
 }
 
+.history-box,
+.admin-box {
+  margin-top: 14px;
+}
+
 .history-box {
-  margin-top: 22px;
   border-top: 1px solid var(--line);
-  padding-top: 18px;
+  padding-top: 14px;
 }
 
 .history-head {
@@ -256,6 +325,10 @@ button.wide {
 
 .history-head h2 {
   font-size: 17px;
+}
+
+.admin-head {
+  margin-top: 12px;
 }
 
 .history-list {
@@ -312,6 +385,38 @@ button.wide {
   border-color: var(--accent);
   background: #f7f2e9;
   color: var(--ink);
+}
+
+.invite-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.invite-result {
+  margin: 12px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.invite-result strong,
+.invite-result span {
+  display: block;
+}
+
+.invite-result strong {
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.invite-code-row {
+  width: 100%;
 }
 
 @media (max-width: 900px) {
@@ -424,17 +529,10 @@ button.wide {
   }
 
   .actions {
-    position: sticky;
-    bottom: 0;
-    z-index: 9;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
-    margin: 18px -14px 0;
-    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
-    background: rgba(255, 253, 248, 0.96);
-    border-top: 1px solid var(--line);
-    backdrop-filter: blur(10px);
+    margin: 18px 0 0;
   }
 
   .actions button {
@@ -445,6 +543,17 @@ button.wide {
 
   .actions #generate {
     grid-column: span 2;
+  }
+
+  .primary-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 9;
+    margin: 18px -14px 0;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    background: rgba(255, 253, 248, 0.96);
+    border-top: 1px solid var(--line);
+    backdrop-filter: blur(10px);
   }
 
   .result {
@@ -465,11 +574,16 @@ button.wide {
     font-size: 15px;
   }
 
-  .history-box {
+  .history-box,
+  .admin-box {
     margin-top: 20px;
   }
 
   .history-item {
+    grid-template-columns: 1fr;
+  }
+
+  .invite-actions {
     grid-template-columns: 1fr;
   }
 
